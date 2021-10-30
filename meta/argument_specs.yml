@@ -1,0 +1,44 @@
+---
+argument_specs:
+  main:
+    short_description: Copy a file in the remote system to AWS S3.
+    description: >
+      - Create a directory in the remote system before retrieving the object from AWS S3.
+      - Retrieve the object from AWS S3 to the reomote system.
+    author: mamono210
+    options:
+
+      aws_access_key_id:
+        description: AWS access key.
+        required: yes
+        type: str
+
+      aws_region:
+        description: The AWS region to use.
+        required: yes
+        type: str
+
+      aws_secret_access_key:
+        description: AWS secret key.
+        required: yes
+        type: str
+
+      remote_directory:
+        description: The remote directory to get the S3 objects.
+        required: yes
+        type: str
+
+      remote_file_name:
+        description: The remote file name when retrieving an object from S3.
+        required: yes
+        type: str
+
+      s3_bucket:
+        description: S3 Bucket name.
+        required: yes
+        type: str
+
+      s3_object_name:
+        description: Keyname of the object inside the bucket.
+        required: yes
+        type: str

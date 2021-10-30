@@ -1,0 +1,132 @@
+---
+name: build
+on: [deployment, push]
+
+jobs:
+  ansible-lint:
+    uses: mamono210-github-actions-workflows/ansible-lint/.github/workflows/workflows.yml@main
+
+  molecule:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - distro: centos7
+            python_interpreter: /usr/bin/python
+          - distro: centos8
+            python_interpreter: /usr/libexec/platform-python
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3
+
+      - name: Install dependencies
+        run: python3 -m pip install -r molecule/requirements.txt
+
+      - name: Set Ansible Python interpreter
+        run: |
+          INTERPRETER=`which python`
+          echo "ANSIBLE_PYTHON_INTERPRETER=${INTERPRETER}" >> $GITHUB_ENV
+
+      - name: Install community.docker for Molecule can find it
+        run: ansible-galaxy collection install community.docker
+
+      - name: Set environment variable with timestamp for making sure Molecule would create unique AWS resources
+        run: |
+          TIMESTAMP=$(date --date "9 hours" "+%Y%m%d_%H%M%S")
+          echo "AWSIAM_USER=molecule_aws-s3-get_${{ matrix.distro }}_${TIMESTAMP}" >> $GITHUB_ENV
+          echo "AWSIAM_POLICY_NAME=molecule_aws-s3-get_${{ matrix.distro }}_${TIMESTAMP}" >> $GITHUB_ENV
+
+      - name: Create AWS Access Key
+        run: |
+          molecule dependency --scenario-name awsiam
+          molecule converge --scenario-name awsiam
+        env:
+          ANSIBLE_FORCE_COLOR: '1'
+          AWS_ACCESS_KEY_ID_1: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+          AWS_SECRET_ACCESS_KEY_1: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          MOLECULE_VERBOSITY: 0
+          PROFILE_TASKS_SORT_ORDER: 'none'
+          PROFILE_TASKS_TASK_OUTPUT_LIMIT: '200'
+          PY_COLORS: '1'
+          TZ: 'Asia/Tokyo'
+
+      - name: Set AWS credentials to GitHub Actions environment variables
+        run: |
+          AWS_ACCESS_KEY_ID=`cat ~/.aws/credentials | grep aws_access_key_id | awk '{print $3}'`
+          AWS_SECRET_ACCESS_KEY=`cat ~/.aws/credentials | grep aws_secret_access_key | awk '{print $3}'`
+          AWS_REGION=`cat ~/.aws/config | grep region | awk '{print $3}'`
+
+          echo "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}" >> $GITHUB_ENV
+          echo "AWS_REGION=${AWS_REGION}" >> $GITHUB_ENV
+
+          echo "::add-mask::$AWS_ACCESS_KEY_ID"
+          echo "::add-mask::$AWS_SECRET_ACCESS_KEY"
+          echo "::add-mask::$AWS_REGION"
+
+      - name: Create test file
+        run: |
+          TIMESTAMP=$(date "+%s")
+          echo ${TIMESTAMP} > /tmp/${TIMESTAMP}.txt
+          echo "TIMESTAMP=${TIMESTAMP}" >> $GITHUB_ENV
+
+      - name: Test with molecule
+        run: |
+          molecule test
+        env:
+          ANSIBLE_FORCE_COLOR: '1'
+          ANSIBLE_PYTHON_INTERPRETER: ${{ matrix.python_interpreter }}
+          # AWS_ACCESS_KEY_ID: sotred in system environment variables
+          # AWS_SECRET_ACCESS_KEY: sotred in system environment variables
+          # AWS_REGION: sotred in system environment variables
+          AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET_NAME }}
+          MOLECULE_DISTRO: ${{ matrix.distro }}
+          MOLECULE_NO_LOG: False
+          PROFILE_TASKS_SORT_ORDER: 'none'
+          PROFILE_TASKS_TASK_OUTPUT_LIMIT: '100'
+          PY_COLORS: '1'
+          TZ: 'Asia/Tokyo'
+          # TIMESTAMP: sotred in system environment variables
+
+      - name: Show Ansible version
+        run: |
+          pip list | grep ansible \
+          | GREP_COLORS='mt=01;34' egrep --color=always '[[:digit:]]' \
+          | GREP_COLORS='mt=01;34' egrep --color=always '\.' \
+          | GREP_COLORS='mt=01;33' egrep --color=always 'ansible.* '
+          ansible --version
+
+      - name: Show molecule version
+        run: |
+          molecule --version
+        env:
+          PY_COLORS: '1'
+
+  trailing-whitespace:
+    name: Find Trailing Whitespace
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: harupy/find-trailing-whitespace@56310d70ae8fd21afec8d4307d2d9ab6c15e7c5d
+
+  yamllint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Execute yamllint
+        run: yamllint *
+
+      - name: Show yamllint version
+        run: |
+          yamllint --version \
+          | GREP_COLORS='mt=01;34' egrep --color=always '[[:digit:]]' \
+          | GREP_COLORS='mt=01;34' egrep --color=always '\.' \
+          | GREP_COLORS='mt=01;33' egrep --color=always 'yamllint.* '

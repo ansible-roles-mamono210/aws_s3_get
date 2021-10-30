@@ -1,0 +1,15 @@
+---
+galaxy_info:
+  role_name: aws_s3_get
+  author: mamono210
+  description: Get data from S3 to the remote system
+  company: no name
+  license: "license (BSD, MIT)"
+  min_ansible_version: 4
+  platforms:
+    - name: EL
+      versions:
+        - 7
+        - 8
+  galaxy_tags: []
+dependencies: []
