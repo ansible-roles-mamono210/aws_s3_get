@@ -95,6 +95,20 @@ jobs:
           TZ: 'Asia/Tokyo'
           # TIMESTAMP: sotred in system environment variables
 
+      - name: Delete AWS Access Key
+        run: |
+          molecule cleanup --scenario-name awsiam
+        env:
+          ANSIBLE_FORCE_COLOR: '1'
+          AWS_ACCESS_KEY_ID_1: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+          AWS_SECRET_ACCESS_KEY_1: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          MOLECULE_VERBOSITY: 0
+          PROFILE_TASKS_SORT_ORDER: 'none'
+          PROFILE_TASKS_TASK_OUTPUT_LIMIT: '200'
+          PY_COLORS: '1'
+          TZ: 'Asia/Tokyo'
+
       - name: Show Ansible version
         run: |
           pip list | grep ansible \
