@@ -14,7 +14,7 @@ jobs:
         include:
           - distro: centos7
             python_interpreter: /usr/bin/python
-          - distro: centos8
+          - distro: centos-stream8
             python_interpreter: /usr/libexec/platform-python
 
     steps:
