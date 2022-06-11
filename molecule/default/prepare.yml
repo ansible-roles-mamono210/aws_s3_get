@@ -31,11 +31,30 @@
         - ansible_distribution == "CentOS"
         - ansible_distribution_major_version == "7"
   tasks:
+    - name: Create directory for creating test text file
+      ansible.builtin.file:
+        path: "{{ lookup('env', 'HOME') }}/test_file"
+        state: directory
+        mode: '0777'
+        owner: "{{ lookup('env', 'HOME') | replace('/home/', '') }}"
+        group: "{{ lookup('env', 'HOME') | replace('/home/', '') }}"
+      delegate_to: localhost
+
+    - name: Create test text file
+      ansible.builtin.copy:
+        dest: "{{ lookup('env', 'HOME') }}/test_file/{{ item.local_file_name }}"
+        content: |
+          {{ item.test_string }}
+      delegate_to: localhost
+      loop: "{{ molecule_yml.platforms }}"
+      loop_control:
+        index_var: index
+
     - name: Simple PUT operation. AWS credentials are passed from environment variables.
       amazon.aws.aws_s3:
         bucket: '{{ item.s3_bucket }}'
         object: '{{ item.s3_object_name }}'
-        src: '{{ item.local_file_path }}'
+        src: "{{ lookup('env', 'HOME') }}/test_file/{{ item.local_file_name }}"
         mode: put
       delegate_to: localhost
       loop: "{{ molecule_yml.platforms }}"

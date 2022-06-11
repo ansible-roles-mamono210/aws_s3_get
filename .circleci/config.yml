@@ -58,6 +58,7 @@ jobs:
             AWSIAM_POLICY_NAME="${VALUE}_${TIMESTAMP}"
             echo "export AWSIAM_USER=$AWSIAM_USER" >> $BASH_ENV
             echo "export AWSIAM_POLICY_NAME=$AWSIAM_POLICY_NAME" >> $BASH_ENV
+            echo "export TIMESTAMP=$TIMESTAMP" >> $BASH_ENV
             source $BASH_ENV
       - run:
           name: Create AWS Access Key
@@ -98,13 +99,6 @@ jobs:
             echo "AWS_REGION=${AWS_REGION}" >> $BASH_ENV
             source $BASH_ENV
       - run:
-          name: Create test file
-          command: |
-            TIMESTAMP=$(date "+%s")
-            echo ${TIMESTAMP} > /tmp/${TIMESTAMP}.txt
-            echo "TIMESTAMP=${TIMESTAMP}" >> $BASH_ENV
-            source $BASH_ENV
-      - run:
           name: Test with Molecule
           command: |
             cd << parameters.checkout-path >>
@@ -124,7 +118,7 @@ jobs:
             -v /etc/group:/etc/group:ro \
             -v /etc/passwd:/etc/passwd:ro \
             -v "$(pwd)":/tmp/$(basename "${PWD}"):ro \
-            -v /tmp:/tmp \
+            -v $HOME/tmp:$HOME/tmp \
             -v /usr/bin/docker:/usr/bin/docker \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -w /tmp/$(basename "${PWD}") \
