@@ -8,8 +8,9 @@ platforms:
     image: ghcr.io/docker-hub-tm/ansible-test/${MOLECULE_DISTRO:-centos7}:latest
     pre_build_image: true
     aws_access_key_id: ${AWS_ACCESS_KEY_ID}
-    aws_secret_access_key: ${AWS_SECRET_ACCESS_KEY}
     aws_region: ${AWS_REGION}
+    aws_secret_access_key: ${AWS_SECRET_ACCESS_KEY}
+    aws_security_token: ${AWS_SESSION_TOKEN}
     local_file_name: ${TIMESTAMP}.txt
     s3_bucket: ${AWS_S3_BUCKET}
     s3_object_name: /ansible-roles-mamono210/aws_s3_get/${TIMESTAMP}
@@ -20,14 +21,16 @@ provisioner:
   config_options:
     defaults:
       callbacks_enabled: ansible.posix.profile_tasks
+      no_log: True
   connection_options:
     aws_access_key_id: ${AWS_ACCESS_KEY_ID}
-    aws_secret_access_key: ${AWS_SECRET_ACCESS_KEY}
     aws_region: ${AWS_REGION}
-    s3_bucket: ${AWS_S3_BUCKET}
-    s3_object_name: /ansible-roles-mamono210/aws_s3_get/${TIMESTAMP}
+    aws_secret_access_key: ${AWS_SECRET_ACCESS_KEY}
+    aws_security_token: ${AWS_SESSION_TOKEN}
     remote_directory: /tmp/s3
     remote_file_name: ${TIMESTAMP}.txt
+    s3_bucket: ${AWS_S3_BUCKET}
+    s3_object_name: /ansible-roles-mamono210/aws_s3_get/${TIMESTAMP}
 verifier:
   name: ansible
 scenario:

@@ -19,6 +19,9 @@ executors:
       - image: ghcr.io/docker-hub-tm/circleci-executors/trailing-whitespace:latest
     resource_class: small
 
+orbs:
+  aws-cli: circleci/aws-cli@3.1.1
+
 jobs:
   ansible-lint:
     executor: ansible-lint
@@ -49,58 +52,34 @@ jobs:
     steps:
       - checkout:
           path: << parameters.checkout-path >>
-      - run:
-          name: Set environment variable with timestamp for making sure Molecule would create unique AWS resources
-          command: |
-            TIMESTAMP=$(date --date "9 hours" "+%Y%m%d_%H%M%S")
-            VALUE='molecule_aws_s3_get'
-            AWSIAM_USER="${VALUE}_${TIMESTAMP}"
-            AWSIAM_POLICY_NAME="${VALUE}_${TIMESTAMP}"
-            echo "export AWSIAM_USER=$AWSIAM_USER" >> $BASH_ENV
-            echo "export AWSIAM_POLICY_NAME=$AWSIAM_POLICY_NAME" >> $BASH_ENV
-            echo "export TIMESTAMP=$TIMESTAMP" >> $BASH_ENV
-            source $BASH_ENV
-      - run:
-          name: Create AWS Access Key
-          command: |
-            sudo chmod 666 /var/run/docker.sock
-
-            cd << parameters.checkout-path >>
-
-            docker run --rm -it \
-            -e ANSIBLE_FORCE_COLOR=1 \
-            -e AWS_ACCESS_KEY_ID_1=${AWS_ACCESS_KEY_ID_1} \
-            -e AWS_SECRET_ACCESS_KEY_1=${AWS_SECRET_ACCESS_KEY_1} \
-            -e AWSIAM_USER=${AWSIAM_USER} \
-            -e AWSIAM_POLICY_NAME=${AWSIAM_POLICY_NAME} \
-            -e MOLECULE_VERBOSITY=0 \
-            -e PROFILE_TASKS_SORT_ORDER=none \
-            -e PROFILE_TASKS_TASK_OUTPUT_LIMIT=200 \
-            -e PY_COLORS=1 \
-            -e TZ='Asia/Tokyo' \
-            -v "$(pwd)":/tmp/$(basename "${PWD}"):ro \
-            -v $HOME/.aws:$HOME/.aws \
-            -v /usr/bin/docker:/usr/bin/docker \
-            -v /var/run/docker.sock:/var/run/docker.sock \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -w /tmp/$(basename "${PWD}") \
-            << parameters.molecule-executor-image >> \
-            molecule test --scenario-name awsiam
-
+      - aws-cli/setup:
+          profile-name: default
+          role-arn: ${AWS_ROLE_ARN}
+          role-session-name: circleci_ansible-role_aws_s3_get
+          session-duration: '900'
       - run:
           name: Set AWS credentials to GitHub Actions environment variables
           command: |
             AWS_ACCESS_KEY_ID=`cat ~/.aws/credentials | grep aws_access_key_id | awk '{print $3}'`
-            AWS_SECRET_ACCESS_KEY=`cat ~/.aws/credentials | grep aws_secret_access_key | awk '{print $3}'`
             AWS_REGION=`cat ~/.aws/config | grep region | awk '{print $3}'`
+            AWS_SECRET_ACCESS_KEY=`cat ~/.aws/credentials | grep aws_secret_access_key | awk '{print $3}'`
+            AWS_SESSION_TOKEN=`cat ~/.aws/credentials | grep aws_session_token | awk '{print $3}'`
             echo "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}" >> $BASH_ENV
-            echo "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}" >> $BASH_ENV
             echo "AWS_REGION=${AWS_REGION}" >> $BASH_ENV
+            echo "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}" >> $BASH_ENV
+            echo "AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN}" >> $BASH_ENV
+            source $BASH_ENV
+      - run:
+          name: Set environment variable with timestamp for making sure Molecule would create unique AWS resources
+          command: |
+            TIMESTAMP=$(date --date "9 hours" "+%Y%m%d_%H%M%S")
+            echo "export TIMESTAMP=$TIMESTAMP" >> $BASH_ENV
             source $BASH_ENV
       - run:
           name: Test with Molecule
           command: |
+            sudo chmod 666 /var/run/docker.sock
+
             cd << parameters.checkout-path >>
 
             docker run --rm -it \
@@ -109,7 +88,9 @@ jobs:
             -e AWS_REGION=${AWS_REGION} \
             -e AWS_S3_BUCKET=${AWS_S3_BUCKET} \
             -e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
+            -e AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN} \
             -e MOLECULE_VERBOSITY=0 \
+            -e MOLECULE_NO_LOG=True \
             -e PROFILE_TASKS_SORT_ORDER=none \
             -e PROFILE_TASKS_TASK_OUTPUT_LIMIT=200 \
             -e PY_COLORS=1 \
@@ -124,31 +105,6 @@ jobs:
             -w /tmp/$(basename "${PWD}") \
             << parameters.molecule-executor-image >> \
             molecule test
-      - run:
-          name: Delete AWS Access Key
-          command: |
-            cd << parameters.checkout-path >>
-
-            docker run --rm -it \
-            -e ANSIBLE_FORCE_COLOR=1 \
-            -e AWS_ACCESS_KEY_ID_1=${AWS_ACCESS_KEY_ID_1} \
-            -e AWS_SECRET_ACCESS_KEY_1=${AWS_SECRET_ACCESS_KEY_1} \
-            -e AWSIAM_USER=${AWSIAM_USER} \
-            -e AWSIAM_POLICY_NAME=${AWSIAM_POLICY_NAME} \
-            -e MOLECULE_VERBOSITY=0 \
-            -e PROFILE_TASKS_SORT_ORDER=none \
-            -e PROFILE_TASKS_TASK_OUTPUT_LIMIT=200 \
-            -e PY_COLORS=1 \
-            -e TZ='Asia/Tokyo' \
-            -v "$(pwd)":/tmp/$(basename "${PWD}"):ro \
-            -v $HOME/.aws:$HOME/.aws \
-            -v /usr/bin/docker:/usr/bin/docker \
-            -v /var/run/docker.sock:/var/run/docker.sock \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -w /tmp/$(basename "${PWD}") \
-            << parameters.molecule-executor-image >> \
-            molecule cleanup --scenario-name awsiam
       - run:
           name: Show Ansible version
           command: |
@@ -200,6 +156,6 @@ workflows:
       - molecule:
           checkout-path: 'aws_s3_get'
           molecule-executor-image: 'ghcr.io/docker-hub-tm/circleci-executors_molecule/molecule:docker'
-          context: aws-credentials
+          context: aws-oidc
           requires:
             - ansible-lint

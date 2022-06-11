@@ -18,11 +18,12 @@
       amazon.aws.aws_s3:
         aws_access_key: '{{ item.aws_access_key_id }}'
         aws_secret_key: '{{ item.aws_secret_access_key }}'
-        region: '{{ item.aws_region }}'
         bucket: '{{ item.s3_bucket }}'
-        object: '{{ item.s3_object_name }}'
         dest: "{{ item.working_dir }}/{{ item.local_file_name }}"
         mode: get
+        object: '{{ item.s3_object_name }}'
+        region: '{{ item.aws_region }}'
+        security_token: '{{ item.aws_security_token }}'
       loop: "{{ molecule_yml.platforms }}"
       loop_control:
         index_var: index

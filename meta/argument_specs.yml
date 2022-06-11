@@ -10,17 +10,18 @@ argument_specs:
 
       aws_access_key_id:
         description: AWS access key.
-        required: yes
         type: str
 
       aws_region:
         description: The AWS region to use.
-        required: yes
         type: str
 
       aws_secret_access_key:
         description: AWS secret key.
-        required: yes
+        type: str
+
+      aws_security_token:
+        description: AWS session token.
         type: str
 
       remote_directory:
