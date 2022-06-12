@@ -1,0 +1,34 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: docker
+platforms:
+  - name: instance
+    image: ghcr.io/docker-hub-tm/ansible-test/${MOLECULE_DISTRO:-centos7}:latest
+    pre_build_image: true
+    local_file_name: ${TIMESTAMP}.txt
+    s3_bucket: ${AWS_S3_BUCKET}
+    s3_object_name: /ansible-roles-mamono210/aws_s3_get/${TIMESTAMP}
+    test_string: ${TIMESTAMP}
+    working_dir: /tmp/s3
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      callbacks_enabled: ansible.posix.profile_tasks
+  connection_options:
+    remote_directory: /tmp/s3
+    remote_file_name: ${TIMESTAMP}.txt
+    s3_bucket: ${AWS_S3_BUCKET}
+    s3_object_name: /ansible-roles-mamono210/aws_s3_get/${TIMESTAMP}
+verifier:
+  name: ansible
+scenario:
+  test_sequence:
+    - dependency
+    - syntax
+    - create
+    - prepare
+    - converge
+    - verify

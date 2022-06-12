@@ -7,10 +7,10 @@ platforms:
   - name: instance
     image: ghcr.io/docker-hub-tm/ansible-test/${MOLECULE_DISTRO:-centos7}:latest
     pre_build_image: true
-    aws_access_key_id: ${AWS_ACCESS_KEY_ID}
-    aws_region: ${AWS_REGION}
-    aws_secret_access_key: ${AWS_SECRET_ACCESS_KEY}
-    aws_security_token: ${AWS_SESSION_TOKEN}
+    aws_access_key_id: ${AWS_ACCESS_KEY_ID_1}
+    aws_region: ${AWS_REGION_1}
+    aws_secret_access_key: ${AWS_SECRET_ACCESS_KEY_1}
+    aws_security_token: ${AWS_SESSION_TOKEN_1}
     local_file_name: ${TIMESTAMP}.txt
     s3_bucket: ${AWS_S3_BUCKET}
     s3_object_name: /ansible-roles-mamono210/aws_s3_get/${TIMESTAMP}
@@ -23,10 +23,10 @@ provisioner:
       callbacks_enabled: ansible.posix.profile_tasks
       no_log: True
   connection_options:
-    aws_access_key_id: ${AWS_ACCESS_KEY_ID}
-    aws_region: ${AWS_REGION}
-    aws_secret_access_key: ${AWS_SECRET_ACCESS_KEY}
-    aws_security_token: ${AWS_SESSION_TOKEN}
+    aws_access_key_id: ${AWS_ACCESS_KEY_ID_1}
+    aws_region: ${AWS_REGION_1}
+    aws_secret_access_key: ${AWS_SECRET_ACCESS_KEY_1}
+    aws_security_token: ${AWS_SESSION_TOKEN_1}
     remote_directory: /tmp/s3
     remote_file_name: ${TIMESTAMP}.txt
     s3_bucket: ${AWS_S3_BUCKET}

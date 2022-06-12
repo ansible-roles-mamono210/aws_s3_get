@@ -42,12 +42,14 @@ jobs:
             | GREP_COLORS='mt=01;34' egrep --color=always '\.' \
             | GREP_COLORS='mt=01;33' egrep --color=always 'ansible.* '
             ansible-lint --version
-  molecule:
+  molecule-env-test:
     executor: molecule
     parameters:
       checkout-path:
         type: string
       molecule-executor-image:
+        type: string
+      molecule-scenario-name:
         type: string
     steps:
       - checkout:
@@ -55,7 +57,7 @@ jobs:
       - aws-cli/setup:
           profile-name: default
           role-arn: ${AWS_ROLE_ARN}
-          role-session-name: circleci_ansible-role_aws_s3_get
+          role-session-name: circleci_ansible-role_aws_s3_get-env
           session-duration: '900'
       - run:
           name: Set AWS credentials to GitHub Actions environment variables
@@ -104,7 +106,87 @@ jobs:
             -v /var/run/docker.sock:/var/run/docker.sock \
             -w /tmp/$(basename "${PWD}") \
             << parameters.molecule-executor-image >> \
-            molecule test
+            molecule test --scenario-name << parameters.molecule-scenario-name >>
+      - run:
+          name: Show Ansible version
+          command: |
+            docker run --rm -it \
+            << parameters.molecule-executor-image >> \
+            ansible --version \
+            | GREP_COLORS='mt=01;34' egrep --color=always '[[:digit:]]' \
+            | GREP_COLORS='mt=01;34' egrep --color=always '\.' \
+            | GREP_COLORS='mt=01;33' egrep --color=always 'ansible.* '
+      - run:
+          name: Show Molecule version
+          command: |
+            docker run --rm -it \
+            << parameters.molecule-executor-image >> \
+            molecule --version
+  molecule-variable-test:
+    executor: molecule
+    parameters:
+      checkout-path:
+        type: string
+      molecule-executor-image:
+        type: string
+      molecule-scenario-name:
+        type: string
+    steps:
+      - checkout:
+          path: << parameters.checkout-path >>
+      - aws-cli/setup:
+          profile-name: default
+          role-arn: ${AWS_ROLE_ARN}
+          role-session-name: circleci_ansible-role_aws_s3_get-var
+          session-duration: '900'
+      - run:
+          name: Set AWS credentials to GitHub Actions environment variables
+          command: |
+            AWS_ACCESS_KEY_ID=`cat ~/.aws/credentials | grep aws_access_key_id | awk '{print $3}'`
+            AWS_REGION=`cat ~/.aws/config | grep region | awk '{print $3}'`
+            AWS_SECRET_ACCESS_KEY=`cat ~/.aws/credentials | grep aws_secret_access_key | awk '{print $3}'`
+            AWS_SESSION_TOKEN=`cat ~/.aws/credentials | grep aws_session_token | awk '{print $3}'`
+            echo "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}" >> $BASH_ENV
+            echo "AWS_REGION=${AWS_REGION}" >> $BASH_ENV
+            echo "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}" >> $BASH_ENV
+            echo "AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN}" >> $BASH_ENV
+            source $BASH_ENV
+      - run:
+          name: Set environment variable with timestamp for making sure Molecule would create unique AWS resources
+          command: |
+            TIMESTAMP=$(date --date "9 hours" "+%Y%m%d_%H%M%S")
+            echo "export TIMESTAMP=$TIMESTAMP" >> $BASH_ENV
+            source $BASH_ENV
+      - run:
+          name: Test with Molecule
+          command: |
+            sudo chmod 666 /var/run/docker.sock
+
+            cd << parameters.checkout-path >>
+
+            docker run --rm -it \
+            -e ANSIBLE_FORCE_COLOR=1 \
+            -e AWS_ACCESS_KEY_ID_1=${AWS_ACCESS_KEY_ID} \
+            -e AWS_REGION_1=${AWS_REGION} \
+            -e AWS_S3_BUCKET=${AWS_S3_BUCKET} \
+            -e AWS_SECRET_ACCESS_KEY_1=${AWS_SECRET_ACCESS_KEY} \
+            -e AWS_SESSION_TOKEN_1=${AWS_SESSION_TOKEN} \
+            -e MOLECULE_VERBOSITY=0 \
+            -e MOLECULE_NO_LOG=True \
+            -e PROFILE_TASKS_SORT_ORDER=none \
+            -e PROFILE_TASKS_TASK_OUTPUT_LIMIT=200 \
+            -e PY_COLORS=1 \
+            -e TIMESTAMP=${TIMESTAMP} \
+            -e TZ='Asia/Tokyo' \
+            -v /etc/group:/etc/group:ro \
+            -v /etc/passwd:/etc/passwd:ro \
+            -v "$(pwd)":/tmp/$(basename "${PWD}"):ro \
+            -v $HOME/tmp:$HOME/tmp \
+            -v /usr/bin/docker:/usr/bin/docker \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -w /tmp/$(basename "${PWD}") \
+            << parameters.molecule-executor-image >> \
+            molecule test --scenario-name << parameters.molecule-scenario-name >>
       - run:
           name: Show Ansible version
           command: |
@@ -153,9 +235,17 @@ workflows:
       - ansible-lint:
           requires:
             - yamllint
-      - molecule:
+      - molecule-env-test:
           checkout-path: 'aws_s3_get'
           molecule-executor-image: 'ghcr.io/docker-hub-tm/circleci-executors_molecule/molecule:docker'
+          molecule-scenario-name: 'env_test'
+          context: aws-oidc
+          requires:
+            - ansible-lint
+      - molecule-variable-test:
+          checkout-path: 'aws_s3_get'
+          molecule-executor-image: 'ghcr.io/docker-hub-tm/circleci-executors_molecule/molecule:docker'
+          molecule-scenario-name: 'variable_test'
           context: aws-oidc
           requires:
             - ansible-lint

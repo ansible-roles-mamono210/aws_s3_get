@@ -52,10 +52,13 @@
 
     - name: Simple PUT operation. AWS credentials are passed from environment variables.
       amazon.aws.aws_s3:
+        aws_access_key: '{{ item.aws_access_key_id }}'
+        aws_secret_key: '{{ item.aws_secret_access_key }}'
         bucket: '{{ item.s3_bucket }}'
-        object: '{{ item.s3_object_name }}'
-        src: "{{ lookup('env', 'HOME') }}/test_file/{{ item.local_file_name }}"
         mode: put
+        object: '{{ item.s3_object_name }}'
+        security_token: '{{ item.aws_security_token }}'
+        src: "{{ lookup('env', 'HOME') }}/test_file/{{ item.local_file_name }}"
       delegate_to: localhost
       loop: "{{ molecule_yml.platforms }}"
       loop_control:

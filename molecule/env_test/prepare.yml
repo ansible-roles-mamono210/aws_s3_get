@@ -1,0 +1,66 @@
+---
+- name: Prepare
+  hosts: all
+
+  roles:
+    - role: geerlingguy.repo-epel
+      become: True
+
+    - role: geerlingguy.pip
+      vars:
+        pip_install_packages:
+          - name: pip
+          - name: boto3
+        pip_executable: pip3
+        pip_package: python3-pip
+        working_dir: /tmp/s3
+      when:
+        - ansible_distribution == "CentOS"
+        - ansible_distribution_major_version == "8"
+
+    - role: geerlingguy.pip
+      vars:
+        pip_install_packages:
+          - name: pip
+            version: "20.3.4"
+          - name: boto3
+        pip_executable: pip
+        pip_package: python-pip
+        working_dir: /tmp/s3
+      when:
+        - ansible_distribution == "CentOS"
+        - ansible_distribution_major_version == "7"
+  tasks:
+    - name: Create directory for creating test text file
+      ansible.builtin.file:
+        path: "{{ lookup('env', 'HOME') }}/test_file"
+        state: directory
+        mode: '0777'
+        owner: "{{ lookup('env', 'HOME') | replace('/home/', '') }}"
+        group: "{{ lookup('env', 'HOME') | replace('/home/', '') }}"
+      delegate_to: localhost
+
+    - name: Create test text file
+      ansible.builtin.copy:
+        dest: "{{ lookup('env', 'HOME') }}/test_file/{{ item.local_file_name }}"
+        content: |
+          {{ item.test_string }}
+      delegate_to: localhost
+      loop: "{{ molecule_yml.platforms }}"
+      loop_control:
+        index_var: index
+
+    - name: Simple PUT operation. AWS credentials are passed from environment variables.
+      amazon.aws.aws_s3:
+        bucket: '{{ item.s3_bucket }}'
+        object: '{{ item.s3_object_name }}'
+        src: "{{ lookup('env', 'HOME') }}/test_file/{{ item.local_file_name }}"
+        mode: put
+      delegate_to: localhost
+      environment:
+        AWS_ACCESS_KEY_ID: "{{ lookup('env', 'AWS_ACCESS_KEY_ID') }}"
+        AWS_SECRET_ACCESS_KEY: "{{ lookup('env', 'AWS_SECRET_ACCESS_KEY') }}"
+        AWS_SESSION_TOKEN: "{{ lookup('env', 'AWS_SESSION_TOKEN') }}"
+      loop: "{{ molecule_yml.platforms }}"
+      loop_control:
+        index_var: index

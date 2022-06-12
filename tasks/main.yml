@@ -1,4 +1,10 @@
 ---
+- name: Set AWS credentials to variables
+  ansible.builtin.set_fact:
+    env_aws_access_key: "{{ lookup('env', 'AWS_ACCESS_KEY_ID') }}"
+    env_aws_secret_key: "{{ lookup('env', 'AWS_SECRET_ACCESS_KEY') }}"
+    env_aws_session_token: "{{ lookup('env', 'AWS_SESSION_TOKEN') }}"
+
 - name: Create the directory to retrieve the S3 object
   ansible.builtin.file:
     path: '{{ remote_directory }}'
@@ -6,7 +12,23 @@
     mode: '0755'
     recurse: true
 
-- name: Simple GET operation. Be sure to specify AWS credentials as Ansible variables. Cannot be passed as environment variable.
+- name: Simple GET operation with AWS credentials passed by environment variables
+  amazon.aws.aws_s3:
+    bucket: '{{ s3_bucket }}'
+    dest: "{{ remote_directory }}/{{ remote_file_name }}"
+    mode: get
+    object: '{{ s3_object_name }}'
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ lookup('env', 'AWS_ACCESS_KEY_ID') }}"
+    AWS_SECRET_ACCESS_KEY: "{{ lookup('env', 'AWS_SECRET_ACCESS_KEY') }}"
+    AWS_SESSION_TOKEN: "{{ lookup('env', 'AWS_SESSION_TOKEN') }}"
+  when:
+    - env_aws_access_key is defined
+    - env_aws_access_key | length > 0
+    - env_aws_secret_key is defined
+    - env_aws_secret_key | length > 0
+
+- name: Simple GET operation
   amazon.aws.aws_s3:
     aws_access_key: '{{ aws_access_key_id | default(omit) }}'
     aws_secret_key: '{{ aws_secret_access_key | default(omit) }}'
@@ -14,5 +36,7 @@
     dest: "{{ remote_directory }}/{{ remote_file_name }}"
     mode: get
     object: '{{ s3_object_name }}'
-    region: '{{ aws_region | default(omit) }}'
     security_token: '{{ aws_security_token | default(omit) }}'
+  when:
+    - env_aws_access_key | length == 0
+    - env_aws_secret_key | length == 0
