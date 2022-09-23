@@ -5,7 +5,7 @@ galaxy_info:
   description: Get data from S3 to the remote system
   company: no name
   license: "license (BSD, MIT)"
-  min_ansible_version: 4
+  min_ansible_version: 6.0.0
   platforms:
     - name: EL
       versions:
