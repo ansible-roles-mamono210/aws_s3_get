@@ -17,10 +17,12 @@
       delegate_to: localhost
 
     - name: Create test text file
-      ansible.builtin.copy:
+      ansible.builtin.template:
+        src: source.template
         dest: "{{ lookup('env', 'HOME') }}/test_file/{{ item.local_file_name }}"
-        content: |
-          {{ item.test_string }}
+        mode: '0777'
+        owner: "{{ lookup('env', 'HOME') | replace('/home/', '') }}"
+        group: "{{ lookup('env', 'HOME') | replace('/home/', '') }}"
       delegate_to: localhost
       loop: "{{ molecule_yml.platforms }}"
       loop_control:

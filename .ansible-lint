@@ -1,9 +1,3 @@
 ---
 exclude_paths: []
 parseable: true
-skip_list: []
-warn_list:  # or 'skip_list' to silence them completely
-  - experimental  # all rules tagged as experimental
-  - risky-file-permissions  # File permissions unset or incorrect.
-  - schema[meta]  # Perform JSON Schema Validation for known lintable kinds.
-  - template-instead-of-copy  # Templated files should use template instead of copy
