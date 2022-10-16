@@ -4,7 +4,7 @@ version: 2.1
 executors:
   ansible-lint:
     docker:
-      - image: ghcr.io/docker-hub-tm/circleci-executors/ansible-lint:latest
+      - image: ghcr.io/docker-images-mamono210/circleci-executors/ansible-lint:latest
     resource_class: small
   molecule:
     machine:
@@ -12,11 +12,11 @@ executors:
     resource_class: medium
   yamllint:
     docker:
-      - image: ghcr.io/docker-hub-tm/circleci-executors/yamllint:latest
+      - image: ghcr.io/docker-images-mamono210/circleci-executors/yamllint:latest
     resource_class: small
   trailing-whitespace:
     docker:
-      - image: ghcr.io/docker-hub-tm/circleci-executors/trailing-whitespace:latest
+      - image: ghcr.io/docker-images-mamono210/circleci-executors/trailing-whitespace:latest
     resource_class: small
 
 orbs:
@@ -245,14 +245,14 @@ workflows:
             - yamllint
       - molecule-env-test:
           checkout-path: 'aws_s3_get'
-          molecule-executor-image: 'ghcr.io/docker-hub-tm/circleci-executors_molecule/molecule:docker'
+          molecule-executor-image: 'ghcr.io/docker-images-mamono210/circleci-executors_molecule/molecule:docker'
           molecule-scenario-name: 'env_test'
           context: aws-oidc
           requires:
             - ansible-lint
       - molecule-variable-test:
           checkout-path: 'aws_s3_get'
-          molecule-executor-image: 'ghcr.io/docker-hub-tm/circleci-executors_molecule/molecule:docker'
+          molecule-executor-image: 'ghcr.io/docker-images-mamono210/circleci-executors_molecule/molecule:docker'
           molecule-scenario-name: 'variable_test'
           context: aws-oidc
           requires:
