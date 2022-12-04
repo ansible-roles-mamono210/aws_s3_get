@@ -13,7 +13,7 @@
     recurse: true
 
 - name: Simple GET operation with AWS credentials passed by environment variables
-  amazon.aws.aws_s3:
+  amazon.aws.s3_object:
     bucket: '{{ s3_bucket }}'
     dest: "{{ remote_directory }}/{{ remote_file_name }}"
     mode: get
@@ -29,7 +29,7 @@
     - env_aws_secret_key | length > 0
 
 - name: Simple GET operation
-  amazon.aws.aws_s3:
+  amazon.aws.s3_object:
     aws_access_key: '{{ aws_access_key_id | default(omit) }}'
     aws_secret_key: '{{ aws_secret_access_key | default(omit) }}'
     bucket: '{{ s3_bucket }}'

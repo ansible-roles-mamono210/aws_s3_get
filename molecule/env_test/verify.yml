@@ -15,7 +15,7 @@
         index_var: index
 
     - name: Retrieve test text file from AWS S3
-      amazon.aws.aws_s3:
+      amazon.aws.s3_object:
         bucket: '{{ item.s3_bucket }}'
         dest: "{{ item.working_dir }}/{{ item.local_file_name }}"
         mode: get

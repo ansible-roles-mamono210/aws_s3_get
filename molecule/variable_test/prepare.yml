@@ -29,7 +29,7 @@
         index_var: index
 
     - name: Simple PUT operation. AWS credentials are passed from environment variables.
-      amazon.aws.aws_s3:
+      amazon.aws.s3_object:
         aws_access_key: '{{ item.aws_access_key_id }}'
         aws_secret_key: '{{ item.aws_secret_access_key }}'
         bucket: '{{ item.s3_bucket }}'
