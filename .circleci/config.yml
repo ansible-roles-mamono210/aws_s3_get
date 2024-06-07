@@ -200,7 +200,6 @@ workflows:
               molecule-scenario-name:
                 - 'env_test'
               molecule-test-image:
-                - 'ghcr.io/docker-images-mamono210/ansible-test/centos-stream8:latest'
                 - 'ghcr.io/docker-images-mamono210/ansible-test/centos-stream9:latest'
           requires:
             - ansible-lint
@@ -215,7 +214,6 @@ workflows:
               molecule-scenario-name:
                 - 'variable_test'
               molecule-test-image:
-                - 'ghcr.io/docker-images-mamono210/ansible-test/centos-stream8:latest'
                 - 'ghcr.io/docker-images-mamono210/ansible-test/centos-stream9:latest'
           requires:
             - ansible-lint
