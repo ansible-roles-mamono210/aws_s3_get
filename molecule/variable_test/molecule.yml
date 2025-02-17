@@ -22,6 +22,7 @@ provisioner:
     defaults:
       callbacks_enabled: ansible.posix.profile_tasks
       no_log: True
+      roles_path: "$HOME/.ansible/roles/:/tmp"
   connection_options:
     aws_access_key_id: ${AWS_ACCESS_KEY_ID_1}
     aws_region: ${AWS_REGION_1}

@@ -17,6 +17,7 @@ provisioner:
   config_options:
     defaults:
       callbacks_enabled: ansible.posix.profile_tasks
+      roles_path: "$HOME/.ansible/roles/:/tmp"
   connection_options:
     remote_directory: /tmp/s3
     remote_file_name: ${TIMESTAMP}.txt
