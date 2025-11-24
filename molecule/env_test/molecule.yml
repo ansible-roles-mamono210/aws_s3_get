@@ -7,6 +7,7 @@ platforms:
   - name: instance
     image: ${MOLECULE_IMAGE}
     pre_build_image: true
+    privileged: true
     local_file_name: ${TIMESTAMP}.txt
     s3_bucket: ${AWS_S3_BUCKET}
     s3_object_name: /ansible-roles-mamono210/aws_s3_get/${TIMESTAMP}

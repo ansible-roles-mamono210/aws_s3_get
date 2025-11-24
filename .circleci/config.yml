@@ -196,7 +196,7 @@ workflows:
               checkout-path:
                 - 'aws_s3_get'
               molecule-executor-image:
-                - 'ghcr.io/docker-images-mamono210/circleci-executors/molecule-docker:25.6.0'
+                - 'ghcr.io/docker-images-mamono210/circleci-executors/molecule-docker:latest'
               molecule-scenario-name:
                 - 'env_test'
               molecule-test-image:
@@ -210,7 +210,7 @@ workflows:
               checkout-path:
                 - 'aws_s3_get'
               molecule-executor-image:
-                - 'ghcr.io/docker-images-mamono210/circleci-executors/molecule-docker:25.6.0'
+                - 'ghcr.io/docker-images-mamono210/circleci-executors/molecule-docker:latest'
               molecule-scenario-name:
                 - 'variable_test'
               molecule-test-image:
