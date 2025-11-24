@@ -36,7 +36,7 @@
     dest: "{{ remote_directory }}/{{ remote_file_name }}"
     mode: get
     object: '{{ s3_object_name }}'
-    security_token: '{{ aws_security_token | default(omit) }}'
+    session_token: '{{ aws_session_token | default(omit) }}'
   when:
     - env_aws_access_key | length == 0
     - env_aws_secret_key | length == 0

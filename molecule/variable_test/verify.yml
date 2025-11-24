@@ -23,7 +23,7 @@
         mode: get
         object: '{{ item.s3_object_name }}'
         region: '{{ item.aws_region }}'
-        security_token: '{{ item.aws_security_token }}'
+        session_token: '{{ item.aws_session_token }}'
       loop: "{{ molecule_yml.platforms }}"
       loop_control:
         index_var: index
