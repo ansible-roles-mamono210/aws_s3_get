@@ -1,34 +1,63 @@
 ---
 version: 2.1
 
-executors:
-  molecule:
-    machine:
-      image: ubuntu-2004:202111-02
-    resource_class: medium
-  trailing-whitespace:
-    docker:
-      - image: ghcr.io/docker-images-mamono210/circleci-executors/trailing-whitespace:latest
-    resource_class: small
-
 orbs:
   ansible-lint: orbss/ansible-lint@0.0.3
   aws-cli: circleci/aws-cli@3.1.1
+  trailing-whitespace: orbss/trailing-whitespace@0.0.2
   yamllint: orbss/yamllint@0.0.4
+
+parameters:
+  ansible_lint_executor_image:
+    type: string
+    default: ghcr.io/docker-images-mamono210/circleci-executors/ansible-lint:26.1.1-py3.14
+  ansible_lint_executor_resource_class:
+    type: enum
+    enum: [small, medium, medium+, large]
+    default: small
+  molecule_docker_executor_image:
+    type: string
+    default: ghcr.io/docker-images-mamono210/circleci-executors/molecule-docker:26.2.0-py3.14-ans13.4.0
+  molecule_machine_executor_image:
+    type: string
+    default: ubuntu-2204:2023.10.1
+  molecule_machine_executor_resource_class:
+    type: enum
+    enum: [medium, large, xlarge]
+    default: medium
+  trailing_whitespace_executor_image:
+    type: string
+    default: ghcr.io/docker-images-mamono210/circleci-executors/trailing-whitespace:py3.14-20260210
+  trailing_whitespace_executor_resource_class:
+    type: enum
+    enum: [small, medium, medium+, large]
+    default: small
+  yamllint_executor_image:
+    type: string
+    default: ghcr.io/docker-images-mamono210/circleci-executors/yamllint:1.38.0-py3.14
+  yamllint_executor_resource_class:
+    type: enum
+    enum: [small, medium, medium+, large]
+    default: small
 
 jobs:
   ansible-lint:
-    executor: ansible-lint/default
+    executor:
+      name: ansible-lint/default
+      image: << pipeline.parameters.ansible_lint_executor_image >>
+      resource_class: << pipeline.parameters.ansible_lint_executor_resource_class >>
     steps:
       - checkout
       - ansible-lint/execute:
           molecule-role-test: true
   molecule-env-test:
-    executor: molecule
+    machine:
+      image: << pipeline.parameters.molecule_machine_executor_image >>
+      resource_class: << pipeline.parameters.molecule_machine_executor_resource_class >>
     parameters:
       checkout-path:
         type: string
-      molecule-executor-image:
+      molecule-docker-executor-image:
         type: string
       molecule-scenario-name:
         type: string
@@ -40,7 +69,7 @@ jobs:
       - aws-cli/setup:
           profile-name: default
           role-arn: ${AWS_ROLE_ARN}
-          role-session-name: circleci_ansible-role_aws_s3_get-env
+          role-session-name: circleci_ansible-role_aws_s3_cp-env
           session-duration: '900'
       - run:
           name: Set environment variable with timestamp for making sure Molecule would create unique AWS resources
@@ -70,20 +99,17 @@ jobs:
             -e PY_COLORS=1 \
             -e TIMESTAMP=${TIMESTAMP} \
             -e TZ='Asia/Tokyo' \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
             -v "$(pwd)":/tmp/$(basename "${PWD}"):ro \
-            -v $HOME/tmp:$HOME/tmp \
             -v /usr/bin/docker:/usr/bin/docker \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -w /tmp/$(basename "${PWD}") \
-            << parameters.molecule-executor-image >> \
+            << parameters.molecule-docker-executor-image >> \
             molecule test --scenario-name << parameters.molecule-scenario-name >>
       - run:
           name: Show Ansible version
           command: |
             docker run --rm -it \
-            << parameters.molecule-executor-image >> \
+            << parameters.molecule-docker-executor-image >> \
             ansible --version \
             | GREP_COLORS='mt=01;34' egrep --color=always '[[:digit:]]' \
             | GREP_COLORS='mt=01;34' egrep --color=always '\.' \
@@ -92,14 +118,16 @@ jobs:
           name: Show Molecule version
           command: |
             docker run --rm -it \
-            << parameters.molecule-executor-image >> \
+            << parameters.molecule-docker-executor-image >> \
             molecule --version
   molecule-variable-test:
-    executor: molecule
+    machine:
+      image: << pipeline.parameters.molecule_machine_executor_image >>
+      resource_class: << pipeline.parameters.molecule_machine_executor_resource_class >>
     parameters:
       checkout-path:
         type: string
-      molecule-executor-image:
+      molecule-docker-executor-image:
         type: string
       molecule-scenario-name:
         type: string
@@ -111,7 +139,7 @@ jobs:
       - aws-cli/setup:
           profile-name: default
           role-arn: ${AWS_ROLE_ARN}
-          role-session-name: circleci_ansible-role_aws_s3_get-var
+          role-session-name: circleci_ansible-role_aws_s3_cp-var
           session-duration: '900'
       - run:
           name: Set environment variable with timestamp for making sure Molecule would create unique AWS resources
@@ -141,20 +169,17 @@ jobs:
             -e PY_COLORS=1 \
             -e TIMESTAMP=${TIMESTAMP} \
             -e TZ='Asia/Tokyo' \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
             -v "$(pwd)":/tmp/$(basename "${PWD}"):ro \
-            -v $HOME/tmp:$HOME/tmp \
             -v /usr/bin/docker:/usr/bin/docker \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -w /tmp/$(basename "${PWD}") \
-            << parameters.molecule-executor-image >> \
+            << parameters.molecule-docker-executor-image >> \
             molecule test --scenario-name << parameters.molecule-scenario-name >>
       - run:
           name: Show Ansible version
           command: |
             docker run --rm -it \
-            << parameters.molecule-executor-image >> \
+            << parameters.molecule-docker-executor-image >> \
             ansible --version \
             | GREP_COLORS='mt=01;34' egrep --color=always '[[:digit:]]' \
             | GREP_COLORS='mt=01;34' egrep --color=always '\.' \
@@ -163,20 +188,24 @@ jobs:
           name: Show Molecule version
           command: |
             docker run --rm -it \
-            << parameters.molecule-executor-image >> \
+            << parameters.molecule-docker-executor-image >> \
             molecule --version
   yamllint:
-    executor: yamllint/default
+    executor:
+      name: yamllint/default
+      image: << pipeline.parameters.yamllint_executor_image >>
+      resource_class: << pipeline.parameters.yamllint_executor_resource_class >>
     steps:
       - checkout
       - yamllint/execute
   trailing-whitespace:
-    executor: trailing-whitespace
+    executor:
+      name: trailing-whitespace/default
+      image: << pipeline.parameters.trailing_whitespace_executor_image >>
+      resource_class: << pipeline.parameters.trailing_whitespace_executor_resource_class >>
     steps:
       - checkout
-      - run:
-          name: Execute trailing-whitespace
-          command: trailing-whitespace
+      - trailing-whitespace/execute
 
 workflows:
   version: 2.1
@@ -195,8 +224,8 @@ workflows:
             parameters:
               checkout-path:
                 - 'aws_s3_get'
-              molecule-executor-image:
-                - 'ghcr.io/docker-images-mamono210/circleci-executors/molecule-docker:latest'
+              molecule-docker-executor-image:
+                - << pipeline.parameters.molecule_docker_executor_image >>
               molecule-scenario-name:
                 - 'env_test'
               molecule-test-image:
@@ -209,8 +238,8 @@ workflows:
             parameters:
               checkout-path:
                 - 'aws_s3_get'
-              molecule-executor-image:
-                - 'ghcr.io/docker-images-mamono210/circleci-executors/molecule-docker:latest'
+              molecule-docker-executor-image:
+                - << pipeline.parameters.molecule_docker_executor_image >>
               molecule-scenario-name:
                 - 'variable_test'
               molecule-test-image:
